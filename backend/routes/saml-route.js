@@ -4,9 +4,10 @@ const saml = require('samlify');
 const fs = require('fs');
 const xml2js = require('xml2js');
 const path = require('path');
-const { response } = require('express');
+var validator = require('@authenio/samlify-xsd-schema-validator');
 const { createOnfidoApplicant, getOktaUser, updateOktaUser, getOktaUserByApplicant } = require('../services/api');
 
+saml.setSchemaValidator(validator);
 const idp = new saml.IdentityProvider({
   metadata: fs.readFileSync(path.join(__dirname, '../saml/idp-metadata.xml')),
   privateKey: fs.readFileSync(path.join(__dirname, '../certs/localhost.key')),
@@ -29,7 +30,8 @@ router.get('/', async (req, res) => {
   try {
     const samlRequest = await idp.parseLoginRequest(sp, 'redirect', req);
     const rawSaml = samlRequest.samlContent;
-
+    req.session.authnRequest = samlRequest;
+    console.log(rawSaml)
     const processors = xml2js.processors
     const parser = new xml2js.Parser({ explicitArray: false, tagNameProcessors: [processors.stripPrefix] });
 
@@ -37,7 +39,10 @@ router.get('/', async (req, res) => {
       if (err) {
         throw err;
       } else {
+        console.log(result);
         nameId = result.AuthnRequest.Subject.NameId;
+        acs = result.AuthnRequest.$.AssertionConsumerServiceURL;
+        req.session.acs = acs;
       }
     });
   } catch (error) {
@@ -60,13 +65,66 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const applicant = req.body.applicant;
-  const oktaRelayState = req.body.relayState;
+  let nameId = '';
+  let acs = '';
+  const relayState = req.body.RelayState;
+  console.log(relayState);
+  try {
+    const samlRequest = await idp.parseLoginRequest(sp, 'post', req);
+    const rawSaml = samlRequest.samlContent;
+    req.session.authnRequest = samlRequest;
+    console.log(rawSaml)
+    const processors = xml2js.processors
+    const parser = new xml2js.Parser({ explicitArray: false, tagNameProcessors: [processors.stripPrefix] });
+
+    parser.parseString(rawSaml, function (err, result) {
+      if (err) {
+        throw err;
+      } else {
+        console.log(result);
+        nameId = result.AuthnRequest.Subject.NameID;
+        acs = result.AuthnRequest.$.AssertionConsumerServiceURL;
+        req.session.acs = acs;
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error });
+  }
+
+  getOktaUser(nameId).then((user) => {
+    createOnfidoApplicant(user.profile.firstName, user.profile.lastName, user.profile.email).then((applicant) => {
+      updateOktaUser(nameId, applicant.id, '').then((updated) => {
+        res.redirect(`${process.env.FRONTEND_URL}/idv?applicant=${applicant.id}&RelayState=${relayState}`);
+      }).catch((error) => {
+        res.status(500).json({ error });
+      });
+    }).catch((error) => {
+      res.status(500).json({ error });
+    });
+  }).catch((error) => {
+    res.status(500).json({ error });
+  });
+});
+
+router.get('/response', async (req, res) => {
+  const applicant = req.query.applicant;
+  console.log(applicant);
+  const oktaRelayState = req.query.relayState;
+  console.log(oktaRelayState);
   idp.relayState = oktaRelayState;
+  const authnExtract = req.session.authnRequest;
+  console.log(authnExtract);
+  const acs = req.session.acs;
+  console.log(acs);
+  sp.assertionConsumerService = [{
+    Binding: saml.Constants.namespace.post,
+    Location: acs
+  }];
   getOktaUserByApplicant(applicant).then((user) => {
     try {
       const samlUser = { email: user.profile.email, userName: user.profile.email };
-      const { context } = idp.createLoginResponse(sp, {}, 'post', samlUser);
+      const { context } = idp.createLoginResponse(sp, authnExtract, 'post', samlUser);
+      console.log(context);
       res.redirect(context);
     } catch (error) {
       res.status(500).json({ error });

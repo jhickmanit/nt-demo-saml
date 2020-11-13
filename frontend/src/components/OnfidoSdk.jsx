@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { init } from 'onfido-sdk-ui';
 
-export default class Onfido extends Component {
+export default class OnfidoSdk extends Component {
   componentDidMount() {
     this.initSDK(this.props.options);
   };

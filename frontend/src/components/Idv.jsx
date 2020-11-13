@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
 import queryString from 'query-string';
 import callApi from '../util/api';
-import Onfido from './Onfido';
+import OnfidoSdk from './OnfidoSdk';
 
 const getSDKToken = async (applicantId) => {
   return await callApi('POST', process.env.REACT_APP_BACKEND_URL, '/api/sdk', { applicantId }).then(result => {
@@ -10,7 +10,7 @@ const getSDKToken = async (applicantId) => {
   });
 };
 
-export default class CaptureExperience extends Component {
+export default class Idv extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -23,14 +23,14 @@ export default class CaptureExperience extends Component {
       applicantId: query.applicant,
       relayState: query.RelayState,
     });
-    this.getToken();
+    this.getToken(query.applicant);
   }
 
-  async getToken() {
+  async getToken(applicantId) {
     try {
-      const token = await getSDKToken(this.state.applicantId);
+      const token = await getSDKToken(applicantId);
       this.setState({
-        sdkToken: token,
+        sdkToken: token.sdkToken,
       });
     } catch (error) {
       console.log(error);
@@ -55,6 +55,22 @@ export default class CaptureExperience extends Component {
         },
         {
           type: 'document',
+          options: {
+            documentTypes: {
+              driving_licence: {
+                country: 'USA'
+              },
+              passport: {
+                country: 'USA'
+              },
+              national_identity_card: {
+                country: 'USA'
+              },
+              residence_permit: {
+                country: 'USA'
+              }
+            }
+          }
         },
         {
           type: 'face',
@@ -74,16 +90,23 @@ export default class CaptureExperience extends Component {
 
   renderOnfido = () => {
     const { sdkToken } = this.state;
-    return <Onfido options={this.setOptions(sdkToken)}></Onfido>;
+    return <OnfidoSdk options={this.setOptions(sdkToken)}></OnfidoSdk>;
   };
 
   render() {
-    const { documentData, error, complete } = this.state;
+    const { documentData, error, complete, sdkToken, applicantId, relayState } = this.state;
     if (complete) {
-      return <Redirect to={{ pathname: '/protected', state: { applicant: this.props.applicantId, data: documentData }}} />
+      return <Redirect to={{ pathname: '/verifying', state: { applicant: applicantId, data: documentData, relayState: relayState }}} />
     } else {
       if (error) {
         return <h3>Error: {error}</h3>;
+      }
+      if (sdkToken === '') {
+        return (
+          <div>
+            <p>Loading...</p>
+          </div>
+        )
       }
       return this.renderOnfido();
     }

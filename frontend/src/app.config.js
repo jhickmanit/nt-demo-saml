@@ -1,10 +1,16 @@
-const oktaSettings = {
-  url: 'https://onfidosedemo.oktapreview.com',
-  issuer: 'https://onfidosedemo.oktapreview.com/oauth2/default',
-  redirect_uri: window.location.origin + '/implicit/callback',
-  client_id: '0oatxzgv3OiSXyQKv0x6',
-  scopes: ['openid', 'profile', 'email'],
-  disableHttpsCheck: process.env.REACT_APP_DISABLE_HTTPS_CHECK
-};
+const CLIENT_ID = process.env.REACT_APP_OKTA_CLIENT_ID || '{clientId}';
+const ISSUER = process.env.REACT_APP_OKTA_ISSUER || 'https://{yourOktaDomain}.com/oauth2/default';
+const REDIRECT_URI = process.env.REACT_APP_OKTA_REDIRECT_URI || 'http://localhost:3000/login/callback';
+const OKTA_TESTING_DISABLEHTTPSCHECK = process.env.REACT_APP_OKTA_DISABLEHTTPSCHECK || false;
 
-export default oktaSettings;
+const config = {
+  oidc: {
+    clientId: CLIENT_ID,
+    issuer: ISSUER,
+    redirectUri: REDIRECT_URI,
+    scopes: ['openid', 'profile', 'email'],
+    pkce: true,
+    disableHttpsCheck: OKTA_TESTING_DISABLEHTTPSCHECK,
+  },
+}
+export default config;

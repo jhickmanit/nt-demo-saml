@@ -30,10 +30,25 @@ const updateOktaUser = (userId, applicantId, idvStatus) => {
   });
 };
 
-const getOktaUserByApplicant = (applicantId) => {
-  return oktaClient.listUsers({ filter: `onfidoApplicantId eq "${applicantId}"`}).each((user) => {
-    return user;
+const updateOktaUserByApplicant = (applicantId, idvStatus) => {
+  oktaClient.listUsers({ search: `profile.onfidoApplicantId eq "${applicantId}"` }).each((user) => {
+    if (user.profile.onfidoApplicantId === applicantId) {
+      updateOktaUser(user.id, '', idvStatus).then((done) => {
+        return done;
+      });
+    };
   });
+};
+
+const getOktaUserByApplicant = async (applicantId) => {
+  let user = '';
+  await oktaClient.listUsers({ search: `profile.onfidoApplicantId eq "${applicantId}"`}).each((oktaUser) => {
+    if (oktaUser.profile.onfidoApplicantId === applicantId) {
+      console.log(oktaUser);
+      user = oktaUser;
+    }
+  });
+  return user;
 };
 
 const createOnfidoApplicant = (firstName, lastName, email) => {
@@ -58,7 +73,7 @@ const verifyHook = (request) => {
 };
 
 const createOnfidoCheck = (applicantId) => {
-  return onfidoClient.check.create({ applicantId, reportNames: ['document, facial_similarity_photo']}).then((response) => {
+  return onfidoClient.check.create({ applicantId: applicantId, reportNames: ['document', 'facial_similarity_photo']}).then((response) => {
     return response;
   });
 };
@@ -77,7 +92,8 @@ const services = {
   createOnfidoSDKToken,
   createOnfidoCheck,
   verifyHook,
-  getOnfidoCheckResult
+  getOnfidoCheckResult,
+  updateOktaUserByApplicant
 };
 
 module.exports = services;

@@ -7,7 +7,8 @@ var { getOktaUser,
   createOnfidoSDKToken,
   createOnfidoCheck,
   verifyHook,
-  getOnfidoCheckResult } = require('../services/api');
+  getOnfidoCheckResult,
+  updateOktaUserByApplicant } = require('../services/api');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -29,6 +30,7 @@ router.post('/applicant', function(req, res, next) {
 
 router.post('/sdk', function(req, res, next) {
   var applicant = req.body.applicantId;
+  console.log(applicant);
   createOnfidoSDKToken(applicant).then((response) => {
     return res.status(200).json({ sdkToken: response });
   }).catch((error) => {
@@ -38,11 +40,36 @@ router.post('/sdk', function(req, res, next) {
 
 router.post('/check', function(req, res, next) {
   var applicant = req.body.applicantId;
+  console.log(`check for applicant: ${applicant}`);
   createOnfidoCheck(applicant).then((response) => {
-    return res.status(200).json({ checkStatus: response.status });
+    console.log(`Response for applicant: ${applicant} - ${JSON.stringify(response)}`);
+    return res.status(200).json({ checkStatus: response.status, id: response.id });
   }).catch((error) => {
+    console.log(error)
     return res.status(500).json({ isError: true, message: error });
   });
+});
+
+router.post('/status', function(req, res, next) {
+  var checkId = req.body.checkId;
+  console.log(`status of checkid: ${checkId}`);
+  getOnfidoCheckResult(checkId).then((response) => {
+    return res.status(200).json({ checkStatus: response.status, checkResult: response.result });
+  }).catch((error) => {
+    console.log(error)
+    return res.status(500).json({ isError: true, message: error });
+  });
+});
+
+router.post('/update', function(req, res, next) {
+  var { applicantId, checkResult } = req.body;
+  console.log(`applicant: ${applicantId} | checkResult: ${checkResult}`);
+  try {
+    updateOktaUserByApplicant(applicantId, checkResult);
+    return res.status(200).json({ updated: true });
+  } catch (error) {
+    return res.status(500).json({ isError: true, message: error });
+  }
 });
 
 router.post('/hook', function(req, res, next) {
