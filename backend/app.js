@@ -14,7 +14,8 @@ const corsOptions = {
   origin: ['*', 'http://localhost:3000', 'http://localhost:3001', 'https://onfidosedemo.oktapreview.com'],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  credentials: true,
 };
 
 const sess = {

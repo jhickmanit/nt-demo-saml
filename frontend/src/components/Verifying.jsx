@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Redirect } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dimmer, Loader, Segment } from 'semantic-ui-react';
 import callApi from '../util/api';
 import useInterval from '../util/interval';
@@ -22,6 +21,12 @@ const updateUser = async (applicantId, checkResult) => {
   });
 };
 
+const getSAMLResponse = async (applicantId, relayState) => {
+  return await callApi('GET', process.env.REACT_APP_BACKEND_URL, `/saml/response?applicant=${applicantId}&relayState=${relayState}`, undefined).then(result => {
+    return result;
+  })
+}
+
 
 const Verifying = (props) => {
   const [verifyState, setVerifyState] = useState({
@@ -29,6 +34,7 @@ const Verifying = (props) => {
     checkId: '',
     status: 'start',
     isComplete: undefined,
+    samlResponse: '',
   });
 
   useEffect(() => {
@@ -56,16 +62,25 @@ const Verifying = (props) => {
         console.log(currentStatus);
         if (currentStatus.checkStatus === 'complete') {
           updateUser(verifyState.applicant, currentStatus.checkResult);
+          const saml = await getSAMLResponse(verifyState.applicant, props.location.state.relayState);
+          console.log(saml);
           setVerifyState(prevState => ({
             ...prevState,
             status: 'complete',
             isComplete: true,
+            samlResponse: saml,
           }));
         }
       }
     asyncStatus();
     }
   }, !verifyState.isComplete ? 10000 : null);
+  const formRef = useRef(null);
+  useEffect(() => {
+    if (verifyState.isComplete) {
+      formRef.current.submit();
+    }
+  }, [verifyState.isComplete]);
 
   if (verifyState.status === 'in_progress' || verifyState.status === 'start') {
     return (
@@ -80,7 +95,10 @@ const Verifying = (props) => {
   };
 
   return (
-    <Redirect to={{ pathname: '/saml', state: { applicantId: verifyState.applicant, relayState: props.location.state.relayState } }} />
+    <form ref={formRef} method="POST" action={verifyState.samlResponse.acs}>
+      <input type="hidden" value={ verifyState.samlResponse.samlMessage} id='SAMLResponse' name='SAMLResponse'></input>
+      <input type="hidden" value={ props.location.state.relayState } id='RelayState' name='RelayState'></input>
+    </form>
   );
 };
 

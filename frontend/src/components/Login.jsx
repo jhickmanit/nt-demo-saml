@@ -5,6 +5,7 @@ import '@okta/okta-signin-widget/dist/css/okta-sign-in.min.css';
 
 import config from '../app.config';
 
+
 const Login = () => {
   const { authService } = useOktaAuth();
 
@@ -15,6 +16,14 @@ const Login = () => {
       baseUrl: issuer.split('/oauth2')[0],
       clientId,
       redirectUri,
+      registration: {
+        preSubmit: function(postData, onSuccess, onFailure){
+          console.log(postData);
+          postData.registeringApp = 'nt-demo';
+          console.log(postData);
+          return onSuccess(postData);
+        },
+      },
       authParams: {
         issuer,
         scopes,

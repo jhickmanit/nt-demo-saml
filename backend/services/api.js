@@ -8,7 +8,7 @@ const oktaClient = new okta.Client({
 
 const onfidoClient = new onfido.Onfido({
   apiToken: process.env.ONFIDO_TOKEN,
-  region: onfido.Region.US,
+  region: onfido.Region.EU,
 });
 
 const getOktaUser = (userId) => {
@@ -37,6 +37,18 @@ const updateOktaUserByApplicant = (applicantId, idvStatus) => {
         return done;
       });
     };
+  });
+};
+
+const addUserToGroupOkta = (email) => {
+  return oktaClient.getUser(email).then((user) => {
+    user.addToGroup(process.env.OKTA_GROUP_ID).then(() => {
+      oktaClient.assignUserToApplication(process.env.OKTA_APPLICATION_ID, {
+        id: user.id
+      }).then(done => {
+        return { done: true };
+      })
+    });
   });
 };
 
@@ -88,6 +100,7 @@ const services = {
   getOktaUser,
   updateOktaUser,
   getOktaUserByApplicant,
+  addUserToGroupOkta,
   createOnfidoApplicant,
   createOnfidoSDKToken,
   createOnfidoCheck,

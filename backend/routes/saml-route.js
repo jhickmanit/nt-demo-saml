@@ -116,16 +116,14 @@ router.get('/response', async (req, res) => {
   console.log(authnExtract);
   const acs = req.session.acs;
   console.log(acs);
-  sp.assertionConsumerService = [{
-    Binding: saml.Constants.namespace.post,
-    Location: acs
-  }];
-  getOktaUserByApplicant(applicant).then((user) => {
+  
+  console.log(JSON.stringify(sp.entityMeta.meta));
+  getOktaUserByApplicant(applicant).then( async (user) => {
     try {
       const samlUser = { email: user.profile.email, userName: user.profile.email };
-      const { context } = idp.createLoginResponse(sp, authnExtract, 'post', samlUser);
+      const { id, context } = await idp.createLoginResponse(sp, authnExtract, 'post', samlUser);
       console.log(context);
-      res.redirect(context);
+      res.status(200).json({ samlMessage: context, acs: acs });
     } catch (error) {
       res.status(500).json({ error });
     }

@@ -8,6 +8,7 @@ var { getOktaUser,
   createOnfidoCheck,
   verifyHook,
   getOnfidoCheckResult,
+  addUserToGroupOkta,
   updateOktaUserByApplicant } = require('../services/api');
 
 /* GET home page. */
@@ -71,6 +72,23 @@ router.post('/update', function(req, res, next) {
     return res.status(500).json({ isError: true, message: error });
   }
 });
+
+router.post('/groups', async (req, res, next) => {
+  var { userId } = req.body;
+  res.status(200).json({ added: true });
+  await sleep(2000);
+  addUserToGroupOkta(userId).then((added) => {
+    console.log(userId + ' added to group');
+  }).catch((error) => {
+    console.log('error adding ' + userId + ' to group: ' + error);
+  });
+});
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}   
 
 router.post('/hook', function(req, res, next) {
   verifyHook(req).then((response) => {
