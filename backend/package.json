@@ -16,6 +16,7 @@
     "express": "~4.16.1",
     "express-session": "^1.17.1",
     "morgan": "~1.9.1",
+    "oidc-provider": "^6.29.7",
     "samlify": "^2.7.6",
     "xml2js": "^0.4.23"
   }
